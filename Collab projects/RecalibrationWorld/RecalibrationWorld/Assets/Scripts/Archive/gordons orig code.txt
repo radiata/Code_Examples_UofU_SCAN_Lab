@@ -1,0 +1,186 @@
+using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
+using Valve.VR;
+
+public class ScaleWallBasedOnTracker : MonoBehaviour {
+
+    public GameObject trackedDevices;
+    
+    public GameObject[] walls;
+
+    public GameObject camera_origin;
+
+    
+
+    public float wallThickness = 0.25f;
+    public float hallwayHalfWidth = 0.6f;
+    public float hallSize = 1f;
+    private bool setPosition = false;
+    private IVRSystem ivrInterface;
+    private List<GameObject> sensors = new List<GameObject>();
+	// Use this for initialization
+	void Start () {
+
+
+
+
+    }
+	
+	// Update is called once per frame
+	void Update () {
+
+        //Check if the position has already been set
+        if(!setPosition)
+        {
+            //Get all sensors
+            foreach (Transform child in trackedDevices.transform)
+            {
+                //Only add sensors to sensors list
+                SteamVR_TrackedObject trackedObjectScript = child.gameObject.GetComponent<SteamVR_TrackedObject>();
+                if (trackedObjectScript.isValid && OpenVR.System.GetTrackedDeviceClass((uint)trackedObjectScript.index) == ETrackedDeviceClass.TrackingReference)
+                {
+                    Debug.Log(OpenVR.System.GetTrackedDeviceClass((uint)trackedObjectScript.index).ToString());
+                    sensors.Add(trackedObjectScript.gameObject);
+                }
+            }
+
+            //Check if sensors have been added
+            if (sensors.Count > 0)
+            {
+                //Check if sensors have updated from default position
+                if (sensors[0].transform.position.x != 0)
+                {
+                    //Iterate and update each wall position depending on the sensor locations
+                    for(int index = 0; index < walls.Length; index++)
+                    {
+                        float opp;
+                        float hyp;
+                        float angle;
+                        switch (index) //CODE CHANGE #1: all references to specific walls[] indexes in the switch have been changed to the local variable index  -Michael
+                        {
+                            case 0:
+                                walls[index].transform.localScale = new Vector3(Mathf.Abs(sensors[0].transform.position.x - sensors[1].transform.position.x), walls[index].transform.localScale.y, wallThickness);
+                                walls[index].transform.position = new Vector3((Mathf.Abs(sensors[0].transform.position.x - sensors[1].transform.position.x) / 2) + Mathf.Min(sensors[0].transform.position.x,sensors[1].transform.position.x), walls[index].transform.position.y, sensors[1].transform.position.z);
+                                break;
+                            case 1:
+                                walls[index].transform.localScale = new Vector3(Mathf.Abs(sensors[0].transform.position.x - sensors[1].transform.position.x), walls[index].transform.localScale.y, wallThickness);
+                                walls[index].transform.position = new Vector3(Mathf.Abs((sensors[0].transform.position.x - sensors[1].transform.position.x) / 2) + Mathf.Min(sensors[0].transform.position.x, sensors[1].transform.position.x), walls[index].transform.position.y, sensors[0].transform.position.z);
+                                break;
+                            case 2:  
+                                walls[index].transform.localScale = new Vector3(Mathf.Abs(sensors[0].transform.position.z - sensors[1].transform.position.z), walls[index].transform.localScale.y, wallThickness);
+                                walls[index].transform.position = new Vector3(sensors[1].transform.position.x, walls[index].transform.position.y, Mathf.Abs(sensors[1].transform.position.z - sensors[0].transform.position.z) / 2 + Mathf.Min(sensors[0].transform.position.z,sensors[1].transform.position.z));
+                                break;
+                            case 3:  
+                                walls[index].transform.localScale = new Vector3(Mathf.Abs(sensors[0].transform.position.z - sensors[1].transform.position.z), walls[index].transform.localScale.y, wallThickness);
+                                walls[index].transform.position = new Vector3(sensors[0].transform.position.x, walls[index].transform.position.y, Mathf.Abs(sensors[1].transform.position.z - sensors[0].transform.position.z) / 2 + Mathf.Min(sensors[0].transform.position.z, sensors[1].transform.position.z));
+                                break;
+                            case 4:  //innerwall #1
+                                walls[index].transform.localScale = new Vector3(Mathf.Abs(sensors[0].transform.position.x - sensors[1].transform.position.x) / 2, walls[index].transform.localScale.y, wallThickness);
+                                walls[index].transform.position = new Vector3((Mathf.Abs(sensors[0].transform.position.x - sensors[1].transform.position.x) / 2) + Mathf.Min(sensors[0].transform.position.x, sensors[1].transform.position.x), walls[index].transform.position.y, (Mathf.Abs(sensors[0].transform.position.z - sensors[1].transform.position.z) / 3.5f) + sensors[0].transform.position.z);
+                                break;
+                            case 5:  //innerwall #2
+                                walls[index].transform.localScale = new Vector3(Mathf.Abs(sensors[0].transform.position.x - sensors[1].transform.position.x) / 2, walls[index].transform.localScale.y, wallThickness);
+                                walls[index].transform.position = new Vector3(Mathf.Abs((sensors[0].transform.position.x - sensors[1].transform.position.x) / 2) + Mathf.Min(sensors[0].transform.position.x, sensors[1].transform.position.x), walls[index].transform.position.y, sensors[1].transform.position.z - (Mathf.Abs(sensors[0].transform.position.z - sensors[1].transform.position.z) / 3.5f));
+                                break;
+                            case 6:  //innerwall #3
+                                walls[index].transform.localScale = new Vector3(Mathf.Abs(walls[4].transform.position.z - walls[5].transform.position.z), walls[index].transform.localScale.y, wallThickness);
+                                walls[index].transform.position = new Vector3(walls[4].transform.position.x - (walls[4].transform.localScale.x) / 2, walls[index].transform.position.y, Mathf.Abs(sensors[1].transform.position.z - sensors[0].transform.position.z) / 2 + Mathf.Min(sensors[0].transform.position.z, sensors[1].transform.position.z));
+                                break;
+                            case 7:  //innerwall #4
+                                walls[index].transform.localScale = new Vector3(Mathf.Abs(walls[4].transform.position.z - walls[5].transform.position.z), walls[index].transform.localScale.y, wallThickness);
+                                walls[index].transform.position = new Vector3(walls[4].transform.position.x + (walls[4].transform.localScale.x) / 2, walls[index].transform.position.y, Mathf.Abs(sensors[1].transform.position.z - sensors[0].transform.position.z) / 2 + Mathf.Min(sensors[0].transform.position.z, sensors[1].transform.position.z));
+                                break;
+                            /*case 4:
+                                //Rotate wall based on base station locations
+                                opp = Mathf.Abs(sensors[1].transform.localPosition.z - sensors[0].transform.localPosition.z);
+                                hyp = new Vector2(sensors[1].transform.localPosition.x - sensors[0].transform.localPosition.x, sensors[1].transform.localPosition.z - sensors[0].transform.localPosition.z).magnitude;
+                                angle =  Mathf.Asin((opp / hyp));
+
+                                walls[4].transform.localRotation = Quaternion.AngleAxis(angle * Mathf.Rad2Deg, Vector3.up);
+
+                                //Scale wall based on base station locations 
+                                walls[4].transform.localScale = new Vector3(new Vector2(sensors[1].transform.position.x - sensors[0].transform.position.x, sensors[1].transform.position.z - sensors[0].transform.position.z).magnitude, walls[4].transform.localScale.y, wallThickness);
+
+                                //Center the angled wall
+                                walls[4].transform.position = new Vector3(Mathf.Abs((sensors[0].transform.position.x - sensors[1].transform.position.x) / 2) + Mathf.Min(sensors[0].transform.position.x, sensors[1].transform.position.x), walls[4].transform.position.y, Mathf.Abs(sensors[1].transform.position.z - sensors[0].transform.position.z) / 2 + Mathf.Min(sensors[0].transform.position.z, sensors[1].transform.position.z));
+
+                                //Offset wall from center to allow hallway
+                                walls[index].transform.position += walls[index].transform.forward * hallwayHalfWidth;
+                                break;
+                            case 5:
+                                //Rotate wall based on base station locations
+                                opp = Mathf.Abs(sensors[1].transform.localPosition.z - sensors[0].transform.localPosition.z);
+                                hyp = new Vector2(sensors[1].transform.localPosition.x - sensors[0].transform.localPosition.x, sensors[1].transform.localPosition.z - sensors[0].transform.localPosition.z).magnitude;
+                                angle = Mathf.Asin((opp / hyp));
+                                walls[index].transform.localRotation = Quaternion.AngleAxis(angle * Mathf.Rad2Deg, Vector3.up);
+
+                                //Scale wall based on base station locations 
+                                walls[index].transform.localScale = new Vector3(new Vector2(sensors[1].transform.position.x - sensors[0].transform.position.x, sensors[1].transform.position.z - sensors[0].transform.position.z).magnitude, walls[index].transform.localScale.y, wallThickness);
+
+                                //Center the angled wall
+                                walls[index].transform.position = new Vector3(Mathf.Abs((sensors[0].transform.position.x - sensors[1].transform.position.x) / 2) + Mathf.Min(sensors[0].transform.position.x, sensors[1].transform.position.x), walls[index].transform.position.y, Mathf.Abs(sensors[1].transform.position.z - sensors[0].transform.position.z) / 2 + Mathf.Min(sensors[0].transform.position.z, sensors[1].transform.position.z));
+
+                                //Offset wall from center to allow hallway
+                                walls[index].transform.position -= walls[index].transform.forward * hallwayHalfWidth;
+
+
+                                break;
+                            case 6:
+                                //Rotate wall based on base station locations
+                                opp = Mathf.Abs(sensors[1].transform.localPosition.z - sensors[0].transform.localPosition.z);
+                                hyp = new Vector2(sensors[1].transform.localPosition.x - sensors[0].transform.localPosition.x, sensors[1].transform.localPosition.z - sensors[0].transform.localPosition.z).magnitude;
+                                angle = Mathf.Asin((opp / hyp));
+
+                                //walls[index].transform.rotation.SetLookRotation(sensors[1].transform.position - sensors[0].transform.position);
+
+                                
+                                walls[index].transform.rotation = Quaternion.AngleAxis((angle)* Mathf.Rad2Deg, Vector3.up);
+
+                                walls[index].transform.rotation = Quaternion.Euler(walls[index].transform.rotation.eulerAngles.x, walls[index].transform.rotation.eulerAngles.y + 90f, walls[index].transform.rotation.eulerAngles.z);
+                                
+
+                                //Scale wall based on base station locations 
+                                walls[index].transform.localScale = new Vector3(2*hallwayHalfWidth, walls[index].transform.localScale.y, wallThickness);
+
+                                //Center the end wall at the end of the hallway
+                                walls[index].transform.position = new Vector3(sensors[0].transform.position.x, walls[index].transform.position.y, sensors[0].transform.position.z);
+
+                                //Offset wall from sensor to end
+                                walls[index].transform.position +=  walls[index].transform.forward * Mathf.Max(Mathf.Abs(Mathf.Tan(angle+Mathf.PI/2)), Mathf.Abs(Mathf.Tan(angle))) * hallwayHalfWidth;
+                                break;
+
+                            case 7:
+                                //Rotate wall based on base station locations
+                                opp = Mathf.Abs(sensors[1].transform.localPosition.z - sensors[0].transform.localPosition.z);
+                                hyp = new Vector2(sensors[1].transform.localPosition.x - sensors[0].transform.localPosition.x, sensors[1].transform.localPosition.z - sensors[0].transform.localPosition.z).magnitude;
+                                angle = Mathf.Asin((opp / hyp));
+                                walls[index].transform.rotation = Quaternion.AngleAxis((angle) * Mathf.Rad2Deg, Vector3.up);
+
+                                walls[index].transform.rotation = Quaternion.Euler(walls[index].transform.rotation.eulerAngles.x, walls[index].transform.rotation.eulerAngles.y + 90f, walls[index].transform.rotation.eulerAngles.z);
+
+
+                                //Scale wall based on base station locations 
+                                walls[index].transform.localScale = new Vector3(2 * hallwayHalfWidth, walls[index].transform.localScale.y, wallThickness);
+
+                                //Center the end wall at the end of the hallway
+                                walls[index].transform.position = new Vector3(sensors[1].transform.position.x, walls[index].transform.position.y, sensors[1].transform.position.z);
+
+                                //Offset wall from sensor to end
+                                walls[index].transform.position += walls[index].transform.forward * Mathf.Max(Mathf.Abs(Mathf.Tan(angle + Mathf.PI / 2)), Mathf.Abs(Mathf.Tan(angle))) * hallwayHalfWidth;
+                                break;*/
+
+                            default:
+                                walls[0].transform.localScale = new Vector3(Mathf.Abs(sensors[0].transform.position.x - sensors[1].transform.position.x), walls[0].transform.localScale.y, wallThickness);
+                                walls[0].transform.position = new Vector3((Mathf.Abs(sensors[0].transform.position.x - sensors[1].transform.position.x) / 2) + Mathf.Min(sensors[0].transform.position.x, sensors[1].transform.position.x), walls[0].transform.position.y, sensors[1].transform.position.z);
+                                break;
+                        }
+                    }
+
+                    setPosition = true;
+                }
+            }
+        }
+	
+	}
+}
